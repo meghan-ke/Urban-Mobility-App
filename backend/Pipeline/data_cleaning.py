@@ -147,7 +147,7 @@ def remove_outliners(dl):
     after_rows = dl_cleaned.shape[0]
 
 
-    # prinr detailed exclusion log 
+    # print detailed exclusion log 
     print("Outlier removal summary:")
     print(f"\n{'='*60}")
     print("EXCLUSION LOG:")

@@ -5,6 +5,8 @@ Integrating the trip data with the zone lookup data.
 import pandas as pd
 from .data_loader import load_trip_data, load_zone_lookup
 from .data_cleaning import clean_data
+from .feature_engineering import engineer_features
+
 
 def intergrate_data():
     
@@ -22,7 +24,9 @@ def intergrate_data():
     
     trip_data, exclusion_log = clean_data(trip_data)
 
-
+    # engineer new features
+    trip_data = engineer_features(trip_data)
+    print(f"   Result: {trip_data.shape[0]:,} rows & {trip_data.shape[1]} columns")
 
     zone_lookup = load_zone_lookup()
 

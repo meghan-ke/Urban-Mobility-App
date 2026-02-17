@@ -1,10 +1,17 @@
-CREATE DATABASE urban_mobility;
+CREATE DATABASE IF NOT EXISTS urban_mobility;
 USE urban_mobility;
 
+
+-- Drop views first (they depend on tables)
+DROP VIEW IF EXISTS trip_details;
+DROP VIEW IF EXISTS rate_code_statistics;
+DROP VIEW IF EXISTS borough_statistics;
+
+
 -- Drop tables if they exist (for clean recreation)
-DROP TABLE IF EXISTS trips CASCADE;
-DROP TABLE IF EXISTS rate_codes CASCADE;
-DROP TABLE IF EXISTS taxi_zones CASCADE;
+DROP TABLE IF EXISTS trips ;
+DROP TABLE IF EXISTS rate_codes ;
+DROP TABLE IF EXISTS taxi_zones ;
 
 
 -- DIMENSION TABLE: rate_codes
@@ -35,7 +42,7 @@ CREATE INDEX idx_taxi_zones_service_zone ON taxi_zones(service_zone);
 
 CREATE TABLE trips (
     -- Primary Key
-    trip_id SERIAL PRIMARY KEY,
+    trip_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     
     -- Trip Metadata
     VendorID INTEGER,
@@ -86,8 +93,6 @@ CREATE TABLE trips (
         ON UPDATE CASCADE,
     
     -- Data Integrity Constraints
-    CONSTRAINT chk_pickup_before_dropoff 
-        CHECK (tpep_pickup_datetime < tpep_dropoff_datetime),
     
     CONSTRAINT chk_passenger_count 
         CHECK (passenger_count >= 0 AND passenger_count <= 9),

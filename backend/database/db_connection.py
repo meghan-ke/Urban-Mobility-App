@@ -27,7 +27,6 @@ def get_connection():
     except Error as error:
         raise RuntimeError(f"MySQL connection failed: {error}")
 
-
 def close_connection(connection):
     """
     Close the database connection

@@ -1,12 +1,10 @@
 """
 Insert cleaned data into the database.
-Order of insertion matters:
-1. rate_codes  (no dependencies)
-2. taxi_zones  (no dependencies)
-3. trips       (depends on rate_codes and taxi_zones)
+Handles NaN values and foreign key constraints.
 """
 
 import pandas as pd
+import numpy as np
 from pathlib import Path
 import sys
 
@@ -17,20 +15,18 @@ sys.path.insert(0, str(backend_dir))
 from config import PROCESSED_DATA_PATH
 from database.db_connection import get_connection, close_connection
 
+
 def insert_rate_codes(cursor):
-    """
-    Insert the 6 standard rate codes into the rate_codes table.
-    This data is static and does not come from a CSV file.
-    """
+    """Insert the 6 standard rate codes."""
     print("Inserting rate codes...")
 
     rate_codes = [
-        (1, 'Standard rate',          'Regular metered fare within NYC'),
-        (2, 'JFK',                    'Flat rate to/from JFK Airport ($70)'),
-        (3, 'Newark',                 'Flat rate to/from Newark Airport'),
-        (4, 'Nassau or Westchester',  'Negotiated fare to suburbs outside NYC'),
-        (5, 'Negotiated fare',        'Pre-arranged price between driver and passenger'),
-        (6, 'Group ride',             'Shared ride with multiple passengers'),
+        (1, 'Standard rate', 'Regular metered fare within NYC'),
+        (2, 'JFK', 'Flat rate to/from JFK Airport ($70)'),
+        (3, 'Newark', 'Flat rate to/from Newark Airport'),
+        (4, 'Nassau or Westchester', 'Negotiated fare to suburbs outside NYC'),
+        (5, 'Negotiated fare', 'Pre-arranged price between driver and passenger'),
+        (6, 'Group ride', 'Shared ride with multiple passengers'),
     ]
 
     for rate_code in rate_codes:
@@ -38,48 +34,71 @@ def insert_rate_codes(cursor):
             INSERT INTO rate_codes (RatecodeID, rate_code_name, description)
             VALUES (%s, %s, %s)
             ON DUPLICATE KEY UPDATE 
-                rate_code_name = VALUES(rate_code_name),
-                description = VALUES(description)
+                rate_code_name = VALUES(rate_code_name)
         """, rate_code)
 
-    print(f"  {len(rate_codes)} rate codes inserted.")
+    print(f"  ✓ {len(rate_codes)} rate codes inserted.")
 
 
-def insert_taxi_zones(cursor, cleaned_data):
-    """
-    Insert taxi zone data from the cleaned CSV into the taxi_zones table.
-    """
+def insert_taxi_zones_chunked(cursor, csv_path):
+    """Insert taxi zones by reading CSV in chunks."""
     print("Inserting taxi zones...")
-
-    # Get unique zones from the cleaned data
-    zones = cleaned_data[['LocationID', 'Borough', 'Zone', 'service_zone']].drop_duplicates()
     
-    count = 0
-    for _, row in zones.iterrows():
-        cursor.execute("""
-            INSERT INTO taxi_zones (LocationID, Borough, Zone, service_zone)
-            VALUES (%s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE 
-                Borough = VALUES(Borough),
-                Zone = VALUES(Zone),
-                service_zone = VALUES(service_zone)
-        """, (
-            int(row['LocationID']), 
-            row['Borough'], 
-            row['Zone'], 
-            row['service_zone']
-        ))
-        count += 1
+    zones_seen = set()
+    zone_count = 0
+    skipped = 0
+    
+    for chunk in pd.read_csv(csv_path, chunksize=50000, 
+                             usecols=['LocationID', 'Borough', 'Zone', 'service_zone']):
+        
+        # Drop rows where Zone is null (required field)
+        chunk = chunk.dropna(subset=['Zone'])
+        
+        # Replace remaining NaN with None
+        chunk = chunk.replace({np.nan: None})
+        
+        zones = chunk[['LocationID', 'Borough', 'Zone', 'service_zone']].drop_duplicates()
+        
+        for _, row in zones.iterrows():
+            location_id = int(row['LocationID'])
+            
+            if location_id in zones_seen:
+                continue
+            
+            # Double-check Zone is not None
+            if pd.isna(row['Zone']) or row['Zone'] is None:
+                skipped += 1
+                continue
+            
+            cursor.execute("""
+                INSERT INTO taxi_zones (LocationID, Borough, Zone, service_zone)
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                    Borough = VALUES(Borough)
+            """, (location_id, row['Borough'], row['Zone'], row['service_zone']))
+            
+            zones_seen.add(location_id)
+            zone_count += 1
 
-    print(f"  {count} taxi zones inserted.")
+    if skipped > 0:
+        print(f"  Skipped {skipped} zone with missing Zone values")
+    print(f"  ✓ {zone_count} taxi zones inserted.")
 
 
-def insert_trips(cursor, cleaned_data):
-    """
-    Insert cleaned trip data from the CSV into the trips table.
-    """
-    print("Inserting trips...")
-    print(f"  Total trips to insert: {len(cleaned_data):,}")
+def insert_trips_chunked(cursor, conn, csv_path):
+    """Insert trips by reading CSV in chunks."""
+    print("Inserting trips in batches...")
+    
+    # Get valid LocationIDs once
+    print("  Loading valid LocationIDs from taxi_zones...")
+    cursor.execute("SELECT LocationID FROM taxi_zones")
+    valid_location_ids = {row[0] for row in cursor.fetchall()}
+    print(f"  Found {len(valid_location_ids)} valid zones")
+   
+    cursor.execute("SELECT RatecodeID FROM rate_codes")
+    valid_rate_codes = {row[0] for row in cursor.fetchall()}
+    print(f"  Found {len(valid_rate_codes)} valid rate codes")
+    
 
     trip_columns = [
         'VendorID', 'tpep_pickup_datetime', 'tpep_dropoff_datetime',
@@ -87,38 +106,77 @@ def insert_trips(cursor, cleaned_data):
         'PULocationID', 'DOLocationID', 'payment_type', 'fare_amount',
         'extra', 'mta_tax', 'tip_amount', 'tolls_amount',
         'improvement_surcharge', 'total_amount', 'congestion_surcharge',
-        'trip_duration_minutes', 'average_speed_mph', 'tip_percentage'
+        'trip_duration_minutes', 'average-speed_mph', 'tip_percentage'
     ]
-
-    trips = cleaned_data[trip_columns]
-
-    batch_size = 1000
+    
+    chunk_size = 10000
     total_inserted = 0
-
-    for i in range(0, len(trips), batch_size):
-        batch = trips.iloc[i:i+batch_size]
+    total_skipped = 0
+    
+    for chunk_num, chunk in enumerate(pd.read_csv(csv_path, chunksize=chunk_size, 
+                                                    usecols=trip_columns), 1):
         
-        for _, row in batch.iterrows():
-            cursor.execute("""
-                INSERT INTO trips (
-                    VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
-                    passenger_count, trip_distance, RatecodeID, store_and_fwd_flag,
-                    PULocationID, DOLocationID, payment_type, fare_amount,
-                    extra, mta_tax, tip_amount, tolls_amount,
-                    improvement_surcharge, total_amount, congestion_surcharge,
-                    trip_duration_minutes, average_speed_mph, tip_percentage
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                )
-            """, tuple(row))
-            total_inserted += 1
+        # Drop rows with missing required fields
+        chunk = chunk.dropna(subset=['tpep_pickup_datetime', 'tpep_dropoff_datetime'])
         
-        # Progress indicator
-        if (i + batch_size) % 10000 == 0:
-            print(f"    Inserted {total_inserted:,} trips so far...")
+        # Filter out invalid LocationIDs
+        initial_count = len(chunk)
+        chunk = chunk[
+            chunk['PULocationID'].isin(valid_location_ids) & 
+            chunk['DOLocationID'].isin(valid_location_ids) &
+            (chunk['RatecodeID'].isin(valid_rate_codes) | chunk['RatecodeID'].isna())
+        ]
+        skipped_in_chunk = initial_count - len(chunk)
+        total_skipped += skipped_in_chunk
 
-    print(f"  {total_inserted:,} trips inserted successfully.")
+         # Replace infinite values first
+        chunk['tip_percentage'] = chunk['tip_percentage'].replace(
+            [np.inf, -np.inf], np.nan
+        )
+
+         # Cap unrealistic percentages (0% to 100%)
+        chunk['tip_percentage'] = chunk['tip_percentage'].clip(lower=0, upper=100)
+
+        # Replace remaining NaN with None
+        chunk = chunk.replace({np.nan: None})
+        
+        # Rename column to match database
+        chunk = chunk.rename(columns={'average-speed_mph': 'average_speed_mph'})
+        
+        # Prepare batch insert
+        values = []
+        for _, row in chunk.iterrows():
+            values.append(tuple(row))
+        
+        if not values:
+            continue
+        
+        # Batch insert
+        cursor.executemany("""
+            INSERT INTO trips (
+                VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+                passenger_count, trip_distance, RatecodeID, store_and_fwd_flag,
+                PULocationID, DOLocationID, payment_type, fare_amount,
+                extra, mta_tax, tip_amount, tolls_amount,
+                improvement_surcharge, total_amount, congestion_surcharge,
+                trip_duration_minutes, average_speed_mph, tip_percentage
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+        """, values)
+        
+        total_inserted += len(values)
+        
+        # Commit every 50k rows
+        if chunk_num % 5 == 0:
+            conn.commit()
+            print(f"    Progress: {total_inserted:,} trips inserted, {total_skipped:,} skipped...")
+    
+    conn.commit()
+    if total_skipped > 0:
+        print(f"  Skipped {total_skipped:,} trips with invalid locationIDs")
+    print(f"  ✓ {total_inserted:,} trips inserted successfully.")
 
 
 def main():
@@ -126,34 +184,31 @@ def main():
     print("Starting data insertion process...")
     print("=" * 60)
 
-    # Load cleaned data
-    cleaned_csv_path = project_root / PROCESSED_DATA_PATH
-    print(f"\nLoading cleaned data from: {cleaned_csv_path}")
+    csv_path = project_root / PROCESSED_DATA_PATH
+    print(f"\nCSV Path: {csv_path}")
     
-    if not cleaned_csv_path.exists():
-        raise FileNotFoundError(f"Cleaned data file not found: {cleaned_csv_path}")
-    
-    cleaned_data = pd.read_csv(cleaned_csv_path)
-    print(f"Loaded {len(cleaned_data):,} rows from CSV\n")
+    if not csv_path.exists():
+        raise FileNotFoundError(f"File not found: {csv_path}")
 
-    # Connect to database
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
-        # Insert in correct order (dimensions first, fact table last)
         insert_rate_codes(cursor)
-        insert_taxi_zones(cursor, cleaned_data)
-        insert_trips(cursor, cleaned_data)
-
         conn.commit()
+        
+        insert_taxi_zones_chunked(cursor, csv_path)
+        conn.commit()
+        
+        insert_trips_chunked(cursor, conn, csv_path)
+
         print("\n" + "=" * 60)
-        print("All data inserted successfully!")
+        print("✓ All data inserted successfully!")
         print("=" * 60)
 
     except Exception as e:
         conn.rollback()
-        print(f"\nError during insertion: {e}")
+        print(f"\n✗ Error: {e}")
         raise
 
     finally:

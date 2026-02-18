@@ -14,10 +14,10 @@ def get_connection():
     """
     try:
         connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="urban_mobility"
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME
         )
         
         if connection.is_connected():

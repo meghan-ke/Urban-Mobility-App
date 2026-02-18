@@ -11,7 +11,7 @@ LOG_DIR = "Data/Logs/"
 ZONES_SHP_PATH = "Data/raw/taxi_zones (1)/taxi_zones.shp"
 
 DB_HOST = "localhost"
-DB_USER = "root"
-DB_PASSWORD = ""
+DB_USER = "taxi_user"
+DB_PASSWORD = "taxi_pass"
 DB_NAME = "urban_mobility"
 

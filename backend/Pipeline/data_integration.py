@@ -1,7 +1,8 @@
-"""
-Integrating the trip data with the zone lookup data.
-"""
+# """
+# Integrating the trip data with the zone lookup data.
+# """
 
+from datetime import datetime
 import pandas as pd
 from pathlib import Path
 import sys
@@ -17,6 +18,23 @@ from .data_loader import load_trip_data, load_zone_lookup
 from .data_cleaning import clean_data
 from .feature_engineering import engineer_features
 
+def save_exclusion_log(exclusion_log):
+    """Save excluded records to CSV in logs directory"""
+    if not exclusion_log:
+        print("No exclusions to log.")
+        return
+    
+    log_dir = project_root / LOG_DIR
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = log_dir / f"data_exclusions_{timestamp}.csv"
+    
+    log_df = pd.DataFrame(exclusion_log)
+    log_df.to_csv(log_file, index=False)
+    
+    print(f"Exclusion log saved: {log_file}")
+    print(f"Total records excluded: {len(exclusion_log):,}")
 
 def intergrate_data():
     
@@ -33,7 +51,7 @@ def intergrate_data():
     print("STEP 3: About to call clean_data...")
     
     trip_data, exclusion_log = clean_data(trip_data)
-
+    save_exclusion_log(exclusion_log)
     # engineer new features
     trip_data = engineer_features(trip_data)
     print(f"   Result: {trip_data.shape[0]:,} rows & {trip_data.shape[1]} columns")

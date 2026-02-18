@@ -9,3 +9,9 @@ ZONE_LOOKUP_PATH = "Data/raw/taxi_zone_lookup.csv"
 PROCESSED_DATA_PATH = "Data/processed/cleaned_trips.csv"
 LOG_DIR = "Data/Logs/"
 ZONES_SHP_PATH = "Data/raw/taxi_zones (1)/taxi_zones.shp"
+
+DB_HOST = "localhost"
+DB_USER = "root"
+DB_PASSWORD = ""
+DB_NAME = "urban_mobility"
+

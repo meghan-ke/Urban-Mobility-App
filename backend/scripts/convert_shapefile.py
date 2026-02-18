@@ -23,7 +23,7 @@ if not shapefile_path.exists():
 
 print("Reading shapefile...")
 gdf = gpd.read_file(str(shapefile_path))
-
+gdf = gdf.to_crs(epsg=4326)
 geojson_path = shapefile_path.with_suffix('.geojson')
 gdf.to_file(str(geojson_path), driver='GeoJSON')
 print(f"Saved GeoJSON to: {geojson_path}")

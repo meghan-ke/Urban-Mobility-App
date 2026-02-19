@@ -82,3 +82,7 @@ Then visit `http://localhost:8000`
 
 ## Data
 Powered by NYC TLC Yellow Taxi Trip Records. The backend exposes pre-processed data via a REST API built with Flask.
+
+Here is the Link to our team task sheet for colaboration on this summative project 
+https://docs.google.com/spreadsheets/d/1GhrOVPYVF76xLCBHelFu07ePUgK41lswFS55tYiSPmo/edit?usp=sharing
+

@@ -6,7 +6,7 @@ import {
 import { 
   renderTripsTable, renderStats, renderBoroughChart, renderMap
 } from "./charts.js";
-
+const loadedTabs = new Set();
 // Global state
 let currentFilters = {
   borough: "",
@@ -179,6 +179,7 @@ async function applyFilters() {
 }
 
 async function loadGeographicTab() {
+  if (loadedTabs.has("geographic")) return;
   try {
     showLoadingState(true);
     
@@ -186,6 +187,7 @@ async function loadGeographicTab() {
     const mapContainer = document.getElementById("mapHeatmap");
     if (!mapContainer) {
       console.warn("mapHeatmap container not found");
+      loadedTabs.add("geographic");
       showLoadingState(false);
       return;
     }

@@ -19,7 +19,7 @@ from .data_cleaning import clean_data
 from .feature_engineering import engineer_features
 
 def save_exclusion_log(exclusion_log):
-    """Save excluded records to CSV in logs directory"""
+    #Save excluded records to CSV in logs directory
     if not exclusion_log:
         print("No exclusions to log.")
         return
@@ -30,11 +30,13 @@ def save_exclusion_log(exclusion_log):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"data_exclusions_{timestamp}.csv"
     
-    log_df = pd.DataFrame(exclusion_log)
+    # Convert list of tuples to DataFrame
+    log_df = pd.DataFrame(exclusion_log, columns=['reason', 'count'])
     log_df.to_csv(log_file, index=False)
     
-    print(f"Exclusion log saved: {log_file}")
-    print(f"Total records excluded: {len(exclusion_log):,}")
+    print(f"✓ Exclusion log saved: {log_file}")
+    print(f"  Total exclusion reasons: {len(exclusion_log)}")
+
 
 def intergrate_data():
     

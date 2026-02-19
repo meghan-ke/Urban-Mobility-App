@@ -25,4 +25,10 @@ export async function fetchZonesGeoJSON() {
 export async function fetchTopPickups(limit = 10) {
   const res = await fetch(`${BASE_URL}/api/locations/top-pickup?limit=${limit}`);
   return res.json();
+
 }
+export async function fetchBoroughs() {
+     const res = await fetch(`${BASE_URL}/api/locations/zones`);
+      const data = await res.json();
+       return [...new Set(data.map(z => z.Borough))].filter(Boolean).sort(); 
+    }

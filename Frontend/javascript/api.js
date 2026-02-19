@@ -1,55 +1,28 @@
-// app.js
-import { fetchTrips, fetchOverview, fetchByBorough, fetchZonesGeoJSON } from "./api.js";
-import { renderTripsTable, renderStats, renderBoroughChart, renderMap } from "./chart.js";
+// api.js
+const BASE_URL = "http://localhost:5000";
 
-let mapInstance = null;   // Keep track of map instance
-let boroughChartInstance = null; // Keep track of chart instance
-
-// Get filter elements
-const boroughFilter = document.getElementById("boroughFilter");
-const hourFilter = document.getElementById("hourFilter");
-const minFareInput = document.getElementById("minFare");
-const maxFareInput = document.getElementById("maxFare");
-const applyFiltersBtn = document.getElementById("applyFilters");
-
-// Load dashboard data
-async function loadDashboard(filters = {}) {
-  try {
-    // 1️⃣ Stats
-    const overview = await fetchOverview();
-    renderStats(overview);
-
-    // 2️⃣ Trips table
-    const tripsData = await fetchTrips({ limit: 20, ...filters });
-    renderTripsTable(tripsData.trips);
-
-    // 3️⃣ Borough chart
-    const boroughData = await fetchByBorough();
-    if (boroughChartInstance) boroughChartInstance.destroy(); // Destroy old chart
-    boroughChartInstance = renderBoroughChart(boroughData);
-
-    // 4️⃣ Map
-    const geojson = await fetchZonesGeoJSON();
-    if (!mapInstance) {
-      mapInstance = renderMap(geojson);
-    }
-  } catch (error) {
-    console.error("Error loading dashboard:", error);
-  }
+export async function fetchOverview() {
+  const res = await fetch(`${BASE_URL}/api/stats/overview`);
+  return res.json();
 }
 
-// Apply filters when button is clicked
-applyFiltersBtn.addEventListener("click", () => {
-  const filters = {};
-  if (boroughFilter.value) filters.borough = boroughFilter.value;
-  if (hourFilter.value) filters.hour = hourFilter.value;
-  if (minFareInput.value) filters.min_fare = parseFloat(minFareInput.value);
-  if (maxFareInput.value) filters.max_fare = parseFloat(maxFareInput.value);
+export async function fetchTrips(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const res = await fetch(`${BASE_URL}/api/trips?${query}`);
+  return res.json();
+}
 
-  loadDashboard(filters);
-});
+export async function fetchByBorough() {
+  const res = await fetch(`${BASE_URL}/api/stats/by-borough`);
+  return res.json();
+}
 
-// Initialize dashboard on page load
-window.addEventListener("DOMContentLoaded", () => {
-  loadDashboard();
-});
+export async function fetchZonesGeoJSON() {
+  const res = await fetch(`${BASE_URL}/api/zones/geojson`);
+  return res.json();
+}
+
+export async function fetchTopPickups(limit = 10) {
+  const res = await fetch(`${BASE_URL}/api/locations/top-pickup?limit=${limit}`);
+  return res.json();
+}

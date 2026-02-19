@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NYC Taxi Analytics</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Leaflet CSS for map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+<!-- CSS -->
+<link rel="stylesheet" href="css/style.css">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Leaflet JS for map -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+
+<div class="dashboard">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h1>NYC Taxi Analytics</h1>
+        <p class="subtitle">Urban Mobility Intelligence</p>
+
+        <div class="filter-card">
+            <h3>Data Filters</h3>
+
+            <label>Borough</label>
+            <select id="boroughFilter">
+                <option value="">All Boroughs</option>
+            </select>
+
+            <label>Time of Day</label>
+            <select id="hourFilter">
+                <option value="">All Hours</option>
+            </select>
+
+            <label>Fare Range ($)</label>
+            <div class="range-inputs">
+                <input type="number" id="minFare" placeholder="Min">
+                <input type="number" id="maxFare" placeholder="Max">
+            </div>
+
+            <button class="btn-primary" id="applyFilters">Apply Filters</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+        <!-- Top Stats -->
+        <div class="top-stats">
+            <div class="stat">
+                <h4>Total Trips</h4>
+                <p id="totalTrips">Loading...</p>
+            </div>
+            <div class="stat">
+                <h4>Avg Fare</h4>
+                <p id="avgFare">Loading...</p>
+            </div>
+            <div class="stat">
+                <h4>Total Revenue</h4>
+                <p id="totalRevenue">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="active">Overview</button>
+            <button>Temporal Patterns</button>
+            <button>Geographic Analysis</button>
+            <button>Trip Explorer</button>
+        </div>
+
+        <!-- Trips Table -->
+        <div class="table-card">
+            <h3>Trip Explorer</h3>
+            <table id="tripsTable">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Pickup</th>
+                        <th>Dropoff</th>
+                        <th>Distance</th>
+                        <th>Fare</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- JS will populate this -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Borough Chart -->
+        <div class="chart-card">
+            <h3>Trips by Borough</h3>
+            <canvas id="boroughChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Map -->
+        <div class="map-card">
+            <h3>NYC Taxi Zones</h3>
+            <div id="map" style="width: 100%; height: 400px;"></div>
+        </div>
+
+    </div>
+</div>
+
+<!-- JS Modules -->
+<script type="module" src="api.js"></script>
+<script type="module" src="chart.js"></script>
+<script type="module" src="app.js"></script>
+
+</body>
+</html>

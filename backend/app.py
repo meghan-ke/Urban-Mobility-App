@@ -71,6 +71,29 @@ def home():
 
 
 # ============================================
+# FRONTEND SERVING
+# ============================================
+
+@app.route('/dashboard')
+def dashboard():
+    """Serve the dashboard HTML"""
+    frontend_path = project_root / "Frontend"
+    if (frontend_path / "index.html").exists():
+        return send_from_directory(str(frontend_path), "index.html")
+    return jsonify({"error": "Dashboard not found"}), 404
+
+
+@app.route('/dashboard/<path:filename>')
+def serve_frontend_files(filename):
+    """Serve static files for the dashboard"""
+    frontend_path = project_root / "Frontend"
+    try:
+        return send_from_directory(str(frontend_path), filename)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+
+# ============================================
 # TRIP ENDPOINTS
 # ============================================
 

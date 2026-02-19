@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NYC Taxi Analytics</title>
 
 <!-- Google Fonts -->
@@ -35,15 +36,15 @@
                 <option value="">All Boroughs</option>
             </select>
 
-            <label>Time of Day</label>
+            <label>Time of Day (Hour)</label>
             <select id="hourFilter">
                 <option value="">All Hours</option>
             </select>
 
             <label>Fare Range ($)</label>
             <div class="range-inputs">
-                <input type="number" id="minFare" placeholder="Min">
-                <input type="number" id="maxFare" placeholder="Max">
+                <input type="number" id="minFare" placeholder="Min" min="0" step="0.01">
+                <input type="number" id="maxFare" placeholder="Max" min="0" step="0.01">
             </div>
 
             <button class="btn-primary" id="applyFilters">Apply Filters</button>
@@ -72,40 +73,74 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="active">Overview</button>
-            <button>Temporal Patterns</button>
             <button>Geographic Analysis</button>
             <button>Trip Explorer</button>
         </div>
 
-        <!-- Trips Table -->
-        <div class="table-card">
-            <h3>Trip Explorer</h3>
-            <table id="tripsTable">
-                <thead>
-                    <tr>
-                        <th>Date/Time</th>
-                        <th>Pickup</th>
-                        <th>Dropoff</th>
-                        <th>Distance</th>
-                        <th>Fare</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- JS will populate this -->
-                </tbody>
-            </table>
+        <!-- Overview Tab Content -->
+        <div id="overviewTab">
+            <!-- Borough Chart -->
+            <div class="chart-card">
+                <h3>Trips by Borough</h3>
+                <canvas id="boroughChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Map -->
+            <div class="map-card">
+                <h3>NYC Taxi Zones</h3>
+                <div id="map" style="width: 100%; height: 400px;"></div>
+            </div>
+
+            <!-- Top Trips Table -->
+            <div class="table-card">
+                <h3>Recent Trips</h3>
+                <table id="tripsTable">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Pickup</th>
+                            <th>Dropoff</th>
+                            <th>Distance</th>
+                            <th>Fare</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- JS will populate this -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Borough Chart -->
-        <div class="chart-card">
-            <h3>Trips by Borough</h3>
-            <canvas id="boroughChart" width="400" height="200"></canvas>
+
+
+        <!-- Geographic Analysis Tab Content -->
+        <div id="geographicTab" style="display: none;">
+            <div class="map-card">
+                <h3>Zone Heatmap & Activity</h3>
+                <div id="mapHeatmap" style="width: 100%; height: 500px;"></div>
+            </div>
         </div>
 
-        <!-- Map -->
-        <div class="map-card">
-            <h3>NYC Taxi Zones</h3>
-            <div id="map" style="width: 100%; height: 400px;"></div>
+        <!-- Trip Explorer Tab Content -->
+        <div id="tripExplorerTab" style="display: none;">
+            <div class="table-card">
+                <h3>Trip Explorer</h3>
+                <table id="tripsTableFull">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Pickup</th>
+                            <th>Dropoff</th>
+                            <th>Distance</th>
+                            <th>Fare</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- JS will populate this -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
     </div>

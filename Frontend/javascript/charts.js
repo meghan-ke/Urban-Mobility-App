@@ -1,4 +1,4 @@
-// chart.js
+// charts.js
 let map = null;         // Map instance
 let boroughChart = null; // Chart.js instance
 

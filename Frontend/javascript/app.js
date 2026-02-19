@@ -1,6 +1,6 @@
 // app.js
 import { fetchTrips, fetchOverview, fetchByBorough, fetchZonesGeoJSON, fetchTopPickups } from "./api.js";
-import { renderTripsTable, renderStats, renderBoroughChart, renderMap } from "./chart.js";
+import { renderTripsTable, renderStats, renderBoroughChart, renderMap } from "./charts.js";
 
 async function initDashboard() {
   try {
